@@ -3,15 +3,25 @@ module Stomp.Client exposing
     , send, call, subscribe, unsubscribe
     , ack, nack
     , begin, commit, abort
-    , Connection, OnMessage, Session, init
+    , Connection, OnMessage, Options, Session, init
     )
 
 {-| A session manages the connection with the server and is used to send commands to the server.
 
 
+# Ports
+
+@docs Connection, OnMessage, listen
+
+
+# Session
+
+@docs Options, Session, init
+
+
 # Connection
 
-@docs listen, connect, disconnect
+@docs connect, disconnect
 
 
 # Commands
@@ -50,27 +60,62 @@ import Stomp.Proc exposing (RemoteProcedure)
 import Stomp.Subscription exposing (Subscription)
 
 
+{-| Connection to a STOMP server. This is the type of the outgoing port.
+
+    port socket : Stomp.Client.Connection msg
+
+-}
 type alias Connection msg =
     Stomp.Internal.Connection.Connection msg
 
 
+{-| Incoming port for messages from the STOMP server.
+
+    port onMessage : Stomp.Client.OnMessage msg
+
+-}
 type alias OnMessage msg =
     Stomp.Internal.Connection.OnMessage msg
 
+{-| The messages to send to your update function when the state of the connection changes.
 
+    { onConnected : msg
+    , onDisconnected : msg
+    , onError : String -> msg
+    , onHeartBeat : msg
+    }
+
+-}
 type alias Options msg =
     Stomp.Internal.Session.Options msg
 
-
+{-| The Session holds the state of the connection. -}
 type alias Session msg =
     Stomp.Internal.Session.Session msg
 
 
+{-| Create a session that manages the WebSocket connection (through a port) and keeps track of the STOMP state.
+
+    Stomp.Client.init socket
+        { onConnected = Connected
+        , onDisconnected = Disconnected
+        , onError = Error
+        , onHeartBeat = HeartBeat
+        }
+
+-}
 init : Connection msg -> Options msg -> Session msg
 init connection options =
     Stomp.Internal.Session.init connection options
 
 
+{-| A subscription that will listen for new WebSocket messages on the provided port and dispatch them to the STOMP session.
+
+    subscriptions : State -> Sub Msg
+    subscriptions state =
+        Stomp.Client.listen onMessage state.session
+
+-}
 listen : OnMessage msg -> Session msg -> Sub msg
 listen onMessage session =
     onMessage
@@ -80,6 +125,11 @@ listen onMessage session =
         )
 
 
+{-| Send a CONNECT frame to the server. This always needs to be the first message sent, to establish the connection and authenticate the user. Trying to send a message before the server has recieved and acknowledged the CONNECT message will result in the server simply closing the socket.
+
+    Stomp.Client.connect session "guest" "guest" "/"
+
+-}
 connect : Session msg -> String -> String -> String -> Cmd msg
 connect session login passcode vhost =
     let
@@ -96,6 +146,7 @@ connect session login passcode vhost =
         |> session.connection
 
 
+{-| Send a DISCONNECT frame to the server. -}
 disconnect : Session msg -> ( Session msg, Cmd msg )
 disconnect session =
     let
