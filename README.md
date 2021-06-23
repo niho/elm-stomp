@@ -57,7 +57,10 @@ update : Msg -> State -> ( State, Cmd Msg )
 update msg state =
     case msg of
         Connected ->
-            ( state, subscribe state.session )
+            let
+                ( session, cmd ) = subscribe state.session
+            in
+            ( { state | session = session }, cmd )
 
         Disconnected ->
             ( state, Cmd.none )
@@ -69,7 +72,10 @@ update msg state =
             ( state, Cmd.none )
 
         Click ->
-            ( state, getString state.session )
+            let
+                ( session, cmd ) = getStrings state.session
+            in
+            ( { state | session = session }, cmd )
 
         Strings (Ok strings) ->
             ( { state | result = strings }, Cmd.none )
