@@ -172,7 +172,7 @@ disconnect session =
             body =
                 Json.Encode.list (List.map Json.Encode.string strings)
         in
-        Stomp.Session.send session topic headers body
+        Stomp.Session.send session topic headers (Just body)
 
 -}
 send : Session msg -> String -> List Header -> Body.Value -> ( Session msg, Cmd msg )
